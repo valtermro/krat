@@ -1,0 +1,27 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{6DDD7545-449D-4568-AFBC-E30C29A3C60C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Krat", "src\Krat\Krat.csproj", "{C4ED2F07-E934-4509-A849-946A02FB95B7}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C4ED2F07-E934-4509-A849-946A02FB95B7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C4ED2F07-E934-4509-A849-946A02FB95B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C4ED2F07-E934-4509-A849-946A02FB95B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C4ED2F07-E934-4509-A849-946A02FB95B7}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{C4ED2F07-E934-4509-A849-946A02FB95B7} = {6DDD7545-449D-4568-AFBC-E30C29A3C60C}
+	EndGlobalSection
+EndGlobal

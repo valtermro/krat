@@ -1,0 +1,11 @@
+﻿/.vs
+/.idea
+/.vscode
+/**/*.local.json
+/**/*.csproj.user
+/**/*.DotSettings.user
+/**/*sln.DotSettings
+/**/*.Migrations/appsettings*.json
+/**/bin
+/**/obj
+/Dockerfile
