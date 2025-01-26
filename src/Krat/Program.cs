@@ -1,29 +1,64 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Themes.Simple;
 
 namespace Krat;
+
+// TODO: Testar
+// - Com monitores em outros lados do principal
+// - Com monitores em outras escalas
+
+// TODO: UX
+// - Destacar o texto digitado até o momento para o "hint" acumulado.
 
 public class Program : Application
 {
     [STAThread]
     public static void Main(string[] args)
     {
+#if DEBUG
+        // TODO: Mover para testes
+        var hints = HintGenerator.New().ToArray();
+        foreach (var hint in hints)
+        {
+            if (Array.Exists(hints, p => p != hint && (p.StartsWith(hint) || hint.StartsWith(p))))
+            {
+                throw new Exception("Hint collision detected.");
+            }
+        }
+#endif
+
         AppBuilder
             .Configure<Program>()
             .UsePlatformDetect()
+            .LogToTrace()
             .StartWithClassicDesktopLifetime(args, ShutdownMode.OnExplicitShutdown);
     }
+
+    private Win32Keyboard _keyboard = null!;
+    private ClassicDesktopStyleApplicationLifetime _lifetime = null!;
+
+    private sealed record HintPoint(Screen Screen, Label Text);
+
+    private bool _hintActive = false;
+    private readonly List<Window> _hintWindows = [];
+    private readonly Dictionary<string, HintPoint> _hints = [];
+    private readonly List<char> _hintTest = [];
 
     public override void Initialize()
     {
         base.Initialize();
+        _lifetime = (ClassicDesktopStyleApplicationLifetime)ApplicationLifetime!;
+        _keyboard = new Win32Keyboard();
+
+        _keyboard.Initialize(OnKeyInput);
+        _lifetime.ShutdownRequested += (_, _) => _keyboard.Shutdown();
 
         // Application needs a theme to render window content
         Styles.Add(new SimpleTheme());
@@ -32,30 +67,33 @@ public class Program : Application
         Run();
     }
 
-    private sealed record MidPoint(double X, double Y);
-
     private void Run()
     {
-        var primaryWindow = CreateWindow();
+        var primaryWindow = new Window();
         var screens = primaryWindow.Screens;
-        var hintCells = new Dictionary<string, MidPoint>();
+        using var hintEnumerator = HintGenerator.New().GetEnumerator();
 
-        var windows = new List<Window>(screens.ScreenCount);
-
-        foreach (var screen in screens.All)
+        foreach (var screen in screens.All.OrderBy(p => p.IsPrimary ? 0 : 1))
         {
-            var window = screen.IsPrimary ? primaryWindow : CreateWindow();
-            windows.Add(window);
+            var screenWidth = screen.Bounds.Width;
+            var screenHeight = screen.Bounds.Height;
+
+            var window = screen.IsPrimary ? primaryWindow : new Window();
+            _hintWindows.Add(window);
+
+            window.WindowState = WindowState.FullScreen;
+            window.Background = new SolidColorBrush(Colors.Transparent);
+            window.Topmost = true;
+            window.Position = new PixelPoint(screen.Bounds.X, screen.Bounds.Y);
+            window.ShowInTaskbar = false;
 
             var grid = new Grid();
-            grid.ShowGridLines = true;
-
             window.Content = grid;
 
             const int cellWidth = 68;
             const int cellHeight = 48;
-            var gridColumns = screen.Bounds.Width / cellWidth;
-            var gridRows = screen.Bounds.Height / cellHeight;
+            var gridColumns = screenWidth / cellWidth;
+            var gridRows = screenHeight / cellHeight;
 
             for (var row = 0; row < gridRows; row++)
                 grid.RowDefinitions.Add(new RowDefinition(1, GridUnitType.Star));
@@ -67,43 +105,107 @@ public class Program : Application
             {
                 for (var col = 0; col < gridColumns; col++)
                 {
-                    var hint = $"{row + 1}x{col + 1}";
-
-                    hintCells[hint] = new MidPoint(
-                        (row + 1d) * cellWidth - cellWidth / 2d,
-                        (col + 1d) * cellHeight - cellHeight / 2d);
+                    if (!hintEnumerator.MoveNext())
+                    {
+                        // TODO: Algo que apareça para o usuário
+                        throw new Exception("Hint generation failed.");
+                    }
 
                     var text = new Label();
-                    text.SetValue(Grid.ColumnProperty, col);
-                    text.SetValue(Grid.RowProperty, row);
+                    grid.Children.Add(text);
 
                     text.Background = new SolidColorBrush(Colors.Black);
                     text.Foreground = new SolidColorBrush(Colors.White);
-                    text.Width = cellWidth;
-                    text.Height = cellHeight;
-
-                    text.Content = hint;
+                    text.HorizontalContentAlignment = HorizontalAlignment.Center;
+                    text.VerticalContentAlignment = VerticalAlignment.Center;
                     text.HorizontalAlignment = HorizontalAlignment.Center;
                     text.VerticalAlignment = VerticalAlignment.Center;
                     text.FontSize = 14;
 
-                    grid.Children.Add(text);
+                    text.SetValue(Grid.ColumnProperty, col);
+                    text.SetValue(Grid.RowProperty, row);
+
+                    var hint = hintEnumerator.Current;
+                    _hints[hint] = new HintPoint(screen, text);
+                    text.Content = hint;
                 }
             }
         }
+    }
 
-        foreach (var window in windows)
+    private void ShowHintWindows()
+    {
+        foreach (var window in _hintWindows)
         {
             window.Show();
+            _hintActive = true;
         }
     }
 
-    private static Window CreateWindow()
+    private void HideHintWindows()
     {
-        var window = new Window();
-        window.WindowState = WindowState.FullScreen;
-        window.Background = new SolidColorBrush(Colors.Black, 0.25);
-        //window.Topmost = true;
-        return window;
+        foreach (var window in _hintWindows)
+        {
+            window.Hide();
+            _hintActive = false;
+        }
+    }
+
+    private bool OnKeyInput(KeyEvent e)
+    {
+        if (e.Kind != KeyEventKind.KeyDown)
+            return true;
+
+        if (e.Key == KeyCode.F6 && e.HasMod(KeyModifier.Control))
+        {
+            ShowHintWindows();
+            return false;
+        }
+
+        if (!_hintActive)
+            return true;
+
+        if (!e.IsAlphaKey())
+        {
+            _hintTest.Clear();
+            return true;
+        }
+
+        _hintTest.Add(e.KeyChar());
+        HintPoint? match = null;
+
+        foreach (var hint in _hints)
+        {
+            if (hint.Key.Length != _hintTest.Count)
+                continue;
+
+            var matchCount = 0;
+
+            for (var i = 0; i < hint.Key.Length; i++)
+            {
+                if (_hintTest[i] != hint.Key[i])
+                    break;
+                matchCount += 1;
+            }
+
+            if (matchCount == hint.Key.Length)
+            {
+                match = hint.Value;
+                break;
+            }
+        }
+
+        if (match != null)
+        {
+            var x = (int)(match.Screen.Bounds.X + match.Text.Bounds.X + match.Text.Bounds.Width / 2);
+            var y = (int)(match.Screen.Bounds.Y + match.Text.Bounds.Y + match.Text.Bounds.Height / 2);
+
+            Win32Mouse.SetCursorPos(x, y);
+            _hintTest.Clear();
+            HideHintWindows();
+            return false;
+        }
+
+        return true;
     }
 }
