@@ -57,8 +57,6 @@ internal static class Win32KeyCodeMapper
     {
         return code switch
         {
-            Win32VirtualKey.Escape => KeyCode.F12,
-
             Win32VirtualKey.F1 => KeyCode.F1,
             Win32VirtualKey.F2 => KeyCode.F2,
             Win32VirtualKey.F3 => KeyCode.F3,
@@ -71,6 +69,7 @@ internal static class Win32KeyCodeMapper
             Win32VirtualKey.F10 => KeyCode.F10,
             Win32VirtualKey.F11 => KeyCode.F11,
             Win32VirtualKey.F12 => KeyCode.F12,
+            Win32VirtualKey.Escape => KeyCode.Escape,
 
             Win32VirtualKey.A => KeyCode.A,
             Win32VirtualKey.B => KeyCode.B,

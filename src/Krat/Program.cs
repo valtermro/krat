@@ -90,10 +90,10 @@ public class Program : Application
             var grid = new Grid();
             window.Content = grid;
 
-            const int cellWidth = 68;
-            const int cellHeight = 48;
-            var gridColumns = screenWidth / cellWidth;
-            var gridRows = screenHeight / cellHeight;
+            const double cellWidth = 68;
+            const double cellHeight = 48;
+            var gridColumns = (int)(screenWidth / cellWidth / screen.Scaling);
+            var gridRows = (int)(screenHeight / cellHeight / screen.Scaling);
 
             for (var row = 0; row < gridRows; row++)
                 grid.RowDefinitions.Add(new RowDefinition(1, GridUnitType.Star));
@@ -149,12 +149,23 @@ public class Program : Application
             window.Hide();
             _hintActive = false;
         }
+
+        _hintTest.Clear();
     }
 
     private bool OnKeyInput(KeyEvent e)
     {
         if (e.Kind != KeyEventKind.KeyDown)
             return true;
+
+        if (e.Key == KeyCode.Escape && _hintActive)
+        {
+            if (_hintTest.Count != 0)
+                _hintTest.Clear();
+            else
+                HideHintWindows();
+            return false;
+        }
 
         if (e.Key == KeyCode.F6 && e.HasMod(KeyModifier.Control))
         {
@@ -168,7 +179,7 @@ public class Program : Application
         if (!e.IsAlphaKey())
         {
             _hintTest.Clear();
-            return true;
+            return false;
         }
 
         _hintTest.Add(e.KeyChar());
@@ -197,15 +208,13 @@ public class Program : Application
 
         if (match != null)
         {
-            var x = (int)(match.Screen.Bounds.X + match.Text.Bounds.X + match.Text.Bounds.Width / 2);
-            var y = (int)(match.Screen.Bounds.Y + match.Text.Bounds.Y + match.Text.Bounds.Height / 2);
+            var x = (int)(match.Text.Bounds.X * match.Screen.Scaling + match.Text.Bounds.Width / 2) + match.Screen.Bounds.X;
+            var y = (int)(match.Text.Bounds.Y * match.Screen.Scaling + match.Text.Bounds.Height / 2) + match.Screen.Bounds.Y;
 
             Win32Mouse.SetCursorPos(x, y);
-            _hintTest.Clear();
             HideHintWindows();
-            return false;
         }
 
-        return true;
+        return false;
     }
 }
