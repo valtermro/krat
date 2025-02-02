@@ -101,10 +101,37 @@ public class Program : Application
             for (var col = 0; col < gridColumns; col++)
                 grid.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
 
+#if true
             for (var row = 0; row < gridRows; row++)
             {
                 for (var col = 0; col < gridColumns; col++)
                 {
+#else
+            static int Cell(int index, int max, ref int increment)
+            {
+                var result = 0;
+
+                if (index % 2 == 0)
+                {
+                    result = index - increment;
+                }
+                else
+                {
+                    result = max - 1 - increment;
+                    increment += 1;
+                }
+
+                return result;
+            }
+            for (int irow = 0, arow = 0; irow < gridRows; irow++)
+            {
+                var row = Cell(irow, gridRows, ref arow);
+
+                for (int icol = 0, acol = 0; icol < gridColumns; icol++)
+                {
+                    var col = Cell(icol, gridColumns, ref acol);
+
+#endif
                     if (!hintEnumerator.MoveNext())
                     {
                         // TODO: Algo que apareça para o usuário
